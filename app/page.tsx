@@ -20,7 +20,7 @@ type GenerationMode = "feelings" | "ai" | "combined"
 
 interface GeneratedImage {
   id: number
-  url: string
+  src: string
 }
 
 export default function OSTVisualizer() {
@@ -31,10 +31,13 @@ export default function OSTVisualizer() {
   const [generationMode, setGenerationMode] = useState<GenerationMode>("combined")
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleAnalyze = () => {
     if (searchQuery.trim()) {
       setShowEmotions(true)
+      setGeneratedImages([])
+      setError(null)
     }
   }
 
@@ -48,22 +51,58 @@ export default function OSTVisualizer() {
 
   const handleGenerate = async () => {
     setIsGenerating(true)
-    // Simulate generation with placeholder images
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setGeneratedImages([
-      { id: 1, url: "https://picsum.photos/seed/ost1/600/400" },
-      { id: 2, url: "https://picsum.photos/seed/ost2/600/400" },
-      { id: 3, url: "https://picsum.photos/seed/ost3/600/400" },
-      { id: 4, url: "https://picsum.photos/seed/ost4/600/400" },
-    ])
-    setIsGenerating(false)
+    setError(null)
+    setGeneratedImages([])
+
+    try {
+      const userEmotions = [
+        ...selectedEmotions,
+        ...(customDescription.trim() ? [customDescription.trim()] : []),
+      ]
+
+      const analyzeRes = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: searchQuery, userEmotions, mode: generationMode }),
+      })
+
+      if (!analyzeRes.ok) {
+        const err = await analyzeRes.json()
+        throw new Error(err.error || "Failed to analyze")
+      }
+
+      const { prompts } = await analyzeRes.json()
+
+      const generateRes = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompts }),
+      })
+
+      if (!generateRes.ok) {
+        const err = await generateRes.json()
+        throw new Error(err.error || "Failed to generate images")
+      }
+
+      const { images } = await generateRes.json()
+
+      setGeneratedImages(
+        images.map((base64: string, index: number) => ({
+          id: index + 1,
+          src: `data:image/jpeg;base64,${base64}`,
+        }))
+      )
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
-  const handleDownload = (imageUrl: string, id: number) => {
+  const handleDownload = (src: string, id: number) => {
     const link = document.createElement("a")
-    link.href = imageUrl
+    link.href = src
     link.download = `ost-visual-${id}.jpg`
-    link.target = "_blank"
     link.click()
   }
 
@@ -100,6 +139,7 @@ export default function OSTVisualizer() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
             placeholder="Enter anime, game, or track name..."
             className="w-full border border-border bg-transparent px-4 py-4 text-lg text-foreground placeholder:text-muted-foreground focus:border-foreground focus:outline-none"
           />
@@ -194,6 +234,13 @@ export default function OSTVisualizer() {
           </section>
         )}
 
+        {/* Error Message */}
+        {error && (
+          <section className="mt-8">
+            <p className="text-center text-sm text-red-500">{error}</p>
+          </section>
+        )}
+
         {/* Gallery Section */}
         {generatedImages.length > 0 && (
           <section className="mt-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -205,13 +252,12 @@ export default function OSTVisualizer() {
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <img
-                    src={image.url}
+                    src={image.src}
                     alt={`Generated visualization ${image.id}`}
                     className="aspect-[3/2] w-full object-cover"
-                    crossOrigin="anonymous"
                   />
                   <button
-                    onClick={() => handleDownload(image.url, image.id)}
+                    onClick={() => handleDownload(image.src, image.id)}
                     className="absolute bottom-3 right-3 p-2 text-foreground opacity-0 transition-opacity group-hover:opacity-100"
                     aria-label={`Download image ${image.id}`}
                   >
