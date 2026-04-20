@@ -8,7 +8,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'Lumina Echoes',
-  description: 'Generate visual art from anime, game, and music OST emotions',
+  description: 'Generate visual art from movie, game, and music OST emotions',
   generator: 'v0.app',
   icons: {
     icon: [

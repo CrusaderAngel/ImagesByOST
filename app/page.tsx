@@ -144,11 +144,11 @@ export default function OSTVisualizer() {
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setQueryError(false) }}
             onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-            placeholder="Enter anime, game, or track name..."
+            placeholder="Enter movie, game, or track name..."
             className={`w-full border bg-transparent px-4 py-4 text-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${queryError ? "border-red-500 focus:border-red-400" : "border-border focus:border-foreground"}`}
           />
           {queryError && (
-            <p className="text-sm text-red-500 -mt-2">Please enter a track or anime name first.</p>
+            <p className="text-sm text-red-500 -mt-2">Please enter a track or movie name first.</p>
           )}
           <button
             onClick={handleAnalyze}

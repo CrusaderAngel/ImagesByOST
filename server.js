@@ -9,6 +9,34 @@ app.use(express.json());
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+async function searchContext(query) {
+  try {
+    const response = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: process.env.TAVILY_API_KEY,
+        query: `${query} movie anime cartoon game hero character OST soundtrack atmosphere mood`,
+        max_results: 3,
+        search_depth: "basic",
+      }),
+    });
+
+    if (!response.ok) return "";
+
+    const data = await response.json();
+    const context = data.results
+      ?.map((r) => r.content)
+      .filter(Boolean)
+      .join(" ")
+      .slice(0, 1500);
+
+    return context || "";
+  } catch {
+    return "";
+  }
+}
+
 app.post("/api/analyze", async (req, res) => {
   try {
     const { query, userEmotions = [], mode = "combined" } = req.body;
@@ -17,17 +45,27 @@ app.post("/api/analyze", async (req, res) => {
       return res.status(400).json({ error: "query or userEmotions required" });
     }
 
+    // Поиск контекста через Tavily (только если есть query)
+    let webContext = "";
+    if (query && mode !== "feelings") {
+      webContext = await searchContext(query);
+    }
+
+    const contextPart = webContext
+      ? `\n\nHere is background context from the web about this: ${webContext}`
+      : "";
+
     let promptInstruction = "";
     if (mode === "feelings") {
-      promptInstruction = `The user describes feelings about a track: ${userEmotions.join(", ")}.`;
+      promptInstruction = `The user describes feelings: ${userEmotions.join(", ")}.`;
     } else if (mode === "ai") {
-      promptInstruction = `Analyze the mood, atmosphere, and emotions of the anime/game OST or track: "${query}". Use only your knowledge of its musical and thematic qualities.`;
+      promptInstruction = `Analyze the mood, atmosphere, and emotions of: "${query}". Use your knowledge and this web context.${contextPart}`;
     } else {
       const emotionPart =
         userEmotions.length > 0
           ? ` The user also describes these feelings: ${userEmotions.join(", ")}.`
           : "";
-      promptInstruction = `Analyze the mood, atmosphere, and emotions of the anime/game OST or track: "${query}".${emotionPart} Combine both the track's qualities and the user's feelings.`;
+      promptInstruction = `Analyze the mood, atmosphere, and emotions of: "${query}".${emotionPart} Combine the track's qualities and the user's feelings.${contextPart}`;
     }
 
     const completion = await groq.chat.completions.create({
@@ -36,16 +74,16 @@ app.post("/api/analyze", async (req, res) => {
         {
           role: "system",
           content: `You are a creative visual artist who generates image prompts.
-        
-        ${mode === "feelings"
-          ? "The user is providing personal emotions. Check if the emotions are real human feelings or moods (like happy, sad, epic, lonely, nostalgic, etc.). Random letters, gibberish, or nonsense are invalid. Real emotions — even unusual ones — are valid."
-          : "First, determine if the user's input is a recognizable anime title, video game title, or music track/artist name. Gibberish, random letters, nonsense strings, or clearly made-up words are invalid."}
-        
-        Respond ONLY with a JSON object in one of these two shapes:
-        - If invalid: { "valid": false }
-        - If valid: { "valid": true, "prompts": ["prompt1","prompt2","prompt3","prompt4","prompt5"] }
-        
-        The prompts must be vivid, detailed image generation prompts capturing the emotional atmosphere.`,
+
+${mode === "feelings"
+  ? "The user is providing personal emotions. Check if the emotions are real human feelings or moods (like happy, sad, epic, lonely, nostalgic, etc.). Random letters, gibberish, or nonsense are invalid. Real emotions — even unusual ones — are valid."
+  : "First, determine if the user's input is a recognizable anime title, movie, character, cartoon, hero, video game title, or music track/artist name. Gibberish, random letters, nonsense strings, or clearly made-up words are invalid."}
+
+Respond ONLY with a JSON object in one of these two shapes:
+- If invalid: { "valid": false }
+- If valid: { "valid": true, "prompts": ["prompt1","prompt2","prompt3","prompt4","prompt5"] }
+
+The prompts must be vivid, detailed image generation prompts capturing the emotional atmosphere.`,
         },
         {
           role: "user",
@@ -66,7 +104,7 @@ app.post("/api/analyze", async (req, res) => {
     }
 
     if (parsed.valid === false) {
-      return res.status(400).json({ error: "Please enter a valid anime, game, or track name" });
+      return res.status(400).json({ error: "Please enter a valid movie, game, or track name" });
     }
 
     let prompts = [];
