@@ -137,7 +137,7 @@ export default function OSTVisualizer() {
         {/* Hero Input Section */}
         <section className="flex flex-col items-center gap-6">
           <h1 className="text-center text-4xl font-light tracking-tight md:text-5xl">
-          Lumina Echo
+          Lumina Echoes
           </h1>
           <input
             type="text"
@@ -232,7 +232,7 @@ export default function OSTVisualizer() {
               disabled={isGenerating}
               className="w-full bg-foreground py-4 text-sm uppercase tracking-widest text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isGenerating ? "Generating..." : "Generate images"}
+              {isGenerating ? "Generating..." : "Generate image"}
             </button>
           </section>
         )}

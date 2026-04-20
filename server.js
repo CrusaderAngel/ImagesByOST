@@ -119,7 +119,7 @@ app.post("/api/generate", async (req, res) => {
     res.json({ images: [base64] });
   } catch (err) {
     console.error("Error in /api/generate:", err);
-    res.status(500).json({ error: err.message || "Failed to generate images" });
+    res.status(500).json({ error: err.message || "Failed to generate image" });
   }
 });
 
