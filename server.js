@@ -36,16 +36,16 @@ app.post("/api/analyze", async (req, res) => {
         {
           role: "system",
           content: `You are a creative visual artist who generates image prompts.
-
-${mode === "feelings"
-  ? "The user is providing personal emotions. Skip validation — always respond with valid: true."
-  : "First, determine if the user's input is a recognizable anime title, video game title, or music track/artist name. Gibberish, random letters, nonsense strings, or clearly made-up words are invalid."}
-
-Respond ONLY with a JSON object in one of these two shapes:
-- If invalid: { "valid": false }
-- If valid: { "valid": true, "prompts": ["prompt1","prompt2","prompt3","prompt4","prompt5"] }
-
-The prompts must be vivid, detailed image generation prompts capturing the emotional atmosphere.`,
+        
+        ${mode === "feelings"
+          ? "The user is providing personal emotions. Check if the emotions are real human feelings or moods (like happy, sad, epic, lonely, nostalgic, etc.). Random letters, gibberish, or nonsense are invalid. Real emotions — even unusual ones — are valid."
+          : "First, determine if the user's input is a recognizable anime title, video game title, or music track/artist name. Gibberish, random letters, nonsense strings, or clearly made-up words are invalid."}
+        
+        Respond ONLY with a JSON object in one of these two shapes:
+        - If invalid: { "valid": false }
+        - If valid: { "valid": true, "prompts": ["prompt1","prompt2","prompt3","prompt4","prompt5"] }
+        
+        The prompts must be vivid, detailed image generation prompts capturing the emotional atmosphere.`,
         },
         {
           role: "user",
