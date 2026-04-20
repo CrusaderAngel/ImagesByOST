@@ -32,13 +32,17 @@ export default function OSTVisualizer() {
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [queryError, setQueryError] = useState(false)
 
   const handleAnalyze = () => {
-    if (searchQuery.trim()) {
-      setShowEmotions(true)
-      setGeneratedImages([])
-      setError(null)
+    if (!searchQuery.trim()) {
+      setQueryError(true)
+      return
     }
+    setQueryError(false)
+    setShowEmotions(true)
+    setGeneratedImages([])
+    setError(null)
   }
 
   const toggleEmotion = (emotion: string) => {
@@ -138,15 +142,17 @@ export default function OSTVisualizer() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); setQueryError(false) }}
             onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
             placeholder="Enter anime, game, or track name..."
-            className="w-full border border-border bg-transparent px-4 py-4 text-lg text-foreground placeholder:text-muted-foreground focus:border-foreground focus:outline-none"
+            className={`w-full border bg-transparent px-4 py-4 text-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${queryError ? "border-red-500 focus:border-red-400" : "border-border focus:border-foreground"}`}
           />
+          {queryError && (
+            <p className="text-sm text-red-500 -mt-2">Please enter a track or anime name first.</p>
+          )}
           <button
             onClick={handleAnalyze}
-            disabled={!searchQuery.trim()}
-            className="border border-border px-8 py-3 text-sm uppercase tracking-widest text-foreground transition-colors hover:border-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            className="border border-border px-8 py-3 text-sm uppercase tracking-widest text-foreground transition-colors hover:border-foreground cursor-pointer"
           >
             Analyze
           </button>
