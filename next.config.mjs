@@ -6,6 +6,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  allowedDevOrigins: [
+    "*.replit.dev",
+    "*.repl.co",
+    ...(process.env.REPLIT_DEV_DOMAIN ? [process.env.REPLIT_DEV_DOMAIN] : []),
+  ],
   async rewrites() {
     return [
       {
