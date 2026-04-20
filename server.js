@@ -35,9 +35,11 @@ app.post("/api/analyze", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: `You are a creative visual artist who validates music/media inputs and generates image prompts.
+          content: `You are a creative visual artist who generates image prompts.
 
-First, determine if the user's input is a recognizable anime title, video game title, or music track/artist name. Gibberish, random letters, nonsense strings, or clearly made-up words are invalid.
+${mode === "feelings"
+  ? "The user is providing personal emotions. Skip validation — always respond with valid: true."
+  : "First, determine if the user's input is a recognizable anime title, video game title, or music track/artist name. Gibberish, random letters, nonsense strings, or clearly made-up words are invalid."}
 
 Respond ONLY with a JSON object in one of these two shapes:
 - If invalid: { "valid": false }

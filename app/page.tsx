@@ -137,7 +137,7 @@ export default function OSTVisualizer() {
         {/* Hero Input Section */}
         <section className="flex flex-col items-center gap-6">
           <h1 className="text-center text-4xl font-light tracking-tight md:text-5xl">
-            OST Visualizer
+          Lumina Echo
           </h1>
           <input
             type="text"
