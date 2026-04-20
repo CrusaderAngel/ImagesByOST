@@ -35,14 +35,19 @@ app.post("/api/analyze", async (req, res) => {
       messages: [
         {
           role: "system",
-          content:
-            "You are a creative visual artist and synesthete who translates music emotions into vivid imagery. Always respond with a valid JSON array of exactly 5 strings and nothing else.",
+          content: `You are a creative visual artist who validates music/media inputs and generates image prompts.
+
+First, determine if the user's input is a recognizable anime title, video game title, or music track/artist name. Gibberish, random letters, nonsense strings, or clearly made-up words are invalid.
+
+Respond ONLY with a JSON object in one of these two shapes:
+- If invalid: { "valid": false }
+- If valid: { "valid": true, "prompts": ["prompt1","prompt2","prompt3","prompt4","prompt5"] }
+
+The prompts must be vivid, detailed image generation prompts capturing the emotional atmosphere.`,
         },
         {
           role: "user",
-          content: `${promptInstruction}
-
-Return a JSON array of exactly 5 strings. Each string is a standalone, vivid image generation prompt — rich with visual detail, color palette, atmosphere, lighting, and mood. No numbering, no labels, no explanation outside the JSON. Output only the JSON array like: ["prompt1","prompt2","prompt3","prompt4","prompt5"]`,
+          content: promptInstruction,
         },
       ],
       temperature: 0.8,
@@ -51,21 +56,25 @@ Return a JSON array of exactly 5 strings. Each string is a standalone, vivid ima
     });
 
     const text = completion.choices[0]?.message?.content ?? "";
-    let prompts;
+    let parsed;
     try {
-      const parsed = JSON.parse(text);
-      if (Array.isArray(parsed)) {
-        prompts = parsed.slice(0, 5).map(String);
-      } else {
-        const firstArray = Object.values(parsed).find(Array.isArray);
-        prompts = firstArray ? firstArray.slice(0, 5).map(String) : [];
-      }
+      parsed = JSON.parse(text);
     } catch {
-      prompts = text
-        .split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0)
-        .slice(0, 5);
+      parsed = {};
+    }
+
+    if (parsed.valid === false) {
+      return res.status(400).json({ error: "Please enter a valid anime, game, or track name" });
+    }
+
+    let prompts = [];
+    if (Array.isArray(parsed.prompts)) {
+      prompts = parsed.prompts.slice(0, 5).map(String);
+    } else if (Array.isArray(parsed)) {
+      prompts = parsed.slice(0, 5).map(String);
+    } else {
+      const firstArray = Object.values(parsed).find(Array.isArray);
+      prompts = firstArray ? firstArray.slice(0, 5).map(String) : [];
     }
 
     res.json({ prompts });
