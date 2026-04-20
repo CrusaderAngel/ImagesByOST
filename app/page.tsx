@@ -28,7 +28,7 @@ export default function OSTVisualizer() {
   const [showEmotions, setShowEmotions] = useState(false)
   const [selectedEmotions, setSelectedEmotions] = useState<string[]>([])
   const [customDescription, setCustomDescription] = useState("")
-  const [generationMode, setGenerationMode] = useState<GenerationMode>("combined")
+  const [generationMode, setGenerationMode] = useState<GenerationMode>("ai")
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -172,7 +172,7 @@ export default function OSTVisualizer() {
                     <button
                       key={emotion}
                       onClick={() => toggleEmotion(emotion)}
-                      className={`px-4 py-2 text-sm transition-colors ${
+                      className={`px-4 py-2 text-sm transition-colors cursor-pointer ${
                         isSelected
                           ? "bg-foreground text-background"
                           : "border border-border text-foreground hover:border-foreground"
@@ -204,7 +204,7 @@ export default function OSTVisualizer() {
                   <button
                     key={card.id}
                     onClick={() => setGenerationMode(card.id)}
-                    className={`flex flex-col items-center gap-4 border p-8 transition-colors ${
+                    className={`cursor-pointer flex flex-col items-center gap-4 border p-8 transition-colors ${
                       isSelected
                         ? "border-foreground"
                         : "border-border hover:border-muted-foreground"
@@ -229,8 +229,8 @@ export default function OSTVisualizer() {
           <section className="mt-16 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
             <button
               onClick={handleGenerate}
-              disabled={isGenerating}
-              className="w-full bg-foreground py-4 text-sm uppercase tracking-widest text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isGenerating || (generationMode === "feelings" && selectedEmotions.length === 0 && !customDescription.trim())}
+              className="w-full bg-foreground py-4 text-sm uppercase tracking-widest text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
             >
               {isGenerating ? "Generating..." : "Generate image"}
             </button>

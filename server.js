@@ -65,7 +65,7 @@ app.post("/api/analyze", async (req, res) => {
     let promptInstruction = "";
     if (mode === "feelings") {
       const contextPart = webContext ? `\n\nContext about "${query}": ${webContext}` : "";
-      promptInstruction = `Focus ONLY on the user's personal emotions: ${userEmotions.join(", ")}. The setting is "${query}" — use it only as a visual backdrop, not as the main theme. The mood must reflect the user's feelings above all else.${contextPart}`;
+      promptInstruction = `The user entered "${query}" as their reference. First validate that "${query}" is a recognizable movie, anime, game, track, artist, or character name. Then focus on the user's personal emotions: ${userEmotions.join(", ")}. Use "${query}" as visual backdrop.${contextPart}`;
     } else if (mode === "ai") {
       promptInstruction = `Analyze "${query}" objectively. Ignore any personal feelings. Focus purely on the visual atmosphere, themes, and emotions that "${query}" itself communicates. Web context: ${webContext}`;
     } else {
@@ -82,9 +82,7 @@ app.post("/api/analyze", async (req, res) => {
           role: "system",
           content: `You are a creative visual artist who generates image prompts.
 
-${mode === "feelings"
-  ? "The user is providing personal emotions. Check if the emotions are real human feelings or moods (like happy, sad, epic, lonely, nostalgic, etc.). Random letters, gibberish, or nonsense are invalid. Real emotions — even unusual ones — are valid."
-  : "First, determine if the user's input is a recognizable anime title, movie, character, cartoon, hero, video game title, or music track/artist name. Gibberish, random letters, nonsense strings, or clearly made-up words are invalid."}
+First, determine if the user's query "${query}" is a recognizable anime title, movie, character, cartoon, hero, video game title, music track, or artist name in any language. Gibberish, random letters like "asd", "qwe", nonsense strings, or clearly made-up words are invalid and must return { "valid": false }.
 
 Respond ONLY with a JSON object in one of these two shapes:
 - If invalid: { "valid": false }
