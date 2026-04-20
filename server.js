@@ -1,14 +1,12 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 app.post("/api/analyze", async (req, res) => {
@@ -21,37 +19,42 @@ app.post("/api/analyze", async (req, res) => {
 
     let promptInstruction = "";
     if (mode === "feelings") {
-      promptInstruction = `The user describes feelings: ${userEmotions.join(", ")}.`;
+      promptInstruction = `The user describes feelings about a track: ${userEmotions.join(", ")}.`;
     } else if (mode === "ai") {
-      promptInstruction = `Analyze the OST/track: "${query}". Use only your knowledge of its musical qualities.`;
+      promptInstruction = `Analyze the mood, atmosphere, and emotions of the anime/game OST or track: "${query}". Use only your knowledge of its musical and thematic qualities.`;
     } else {
       const emotionPart =
         userEmotions.length > 0
           ? ` The user also describes these feelings: ${userEmotions.join(", ")}.`
           : "";
-      promptInstruction = `Analyze the OST/track: "${query}".${emotionPart} Combine both sources.`;
+      promptInstruction = `Analyze the mood, atmosphere, and emotions of the anime/game OST or track: "${query}".${emotionPart} Combine both the track's qualities and the user's feelings.`;
     }
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: `You are a creative visual artist. ${promptInstruction}
+    const systemPrompt = `You are a creative visual artist and synesthete who translates music emotions into vivid imagery.
 
-Generate exactly 5 distinct, vivid image generation prompts that capture the emotional essence. Each prompt should be a standalone description for an AI image generator — rich with visual detail, color, atmosphere, and mood. Do NOT include numbering, labels, or explanations. Output only the 5 prompts, one per line.`,
-        },
-      ],
+${promptInstruction}
+
+Return a JSON array of exactly 5 strings. Each string is a standalone, vivid image generation prompt — rich with visual detail, color palette, atmosphere, lighting, and mood. No numbering, no labels, no explanation. Output only valid JSON like: ["prompt1","prompt2","prompt3","prompt4","prompt5"]`;
+
+    const result = await genai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
+      config: { responseMimeType: "application/json" },
     });
 
-    const text =
-      message.content[0].type === "text" ? message.content[0].text : "";
-    const prompts = text
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0)
-      .slice(0, 5);
+    const text = result.text ?? "";
+    let prompts;
+    try {
+      prompts = JSON.parse(text);
+      if (!Array.isArray(prompts)) throw new Error("Not an array");
+      prompts = prompts.slice(0, 5).map(String);
+    } catch {
+      prompts = text
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0)
+        .slice(0, 5);
+    }
 
     res.json({ prompts });
   } catch (err) {
@@ -75,8 +78,7 @@ app.post("/api/generate", async (req, res) => {
           prompt,
           config: { numberOfImages: 1, outputMimeType: "image/jpeg" },
         });
-        const bytes =
-          response.generatedImages?.[0]?.image?.imageBytes;
+        const bytes = response.generatedImages?.[0]?.image?.imageBytes;
         return bytes ?? null;
       })
     );
