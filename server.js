@@ -54,7 +54,7 @@ app.post("/api/analyze", async (req, res) => {
 
     // Поиск контекста через Tavily (только если есть query)
     let webContext = "";
-    if (query && mode !== "feelings") {
+    if (query) {
       webContext = await searchContext(query);
     }
 
@@ -64,15 +64,15 @@ app.post("/api/analyze", async (req, res) => {
 
     let promptInstruction = "";
     if (mode === "feelings") {
-      promptInstruction = `The user describes feelings: ${userEmotions.join(", ")}.`;
+      const contextPart = webContext ? `\n\nContext about "${query}": ${webContext}` : "";
+      promptInstruction = `Focus ONLY on the user's personal emotions: ${userEmotions.join(", ")}. The setting is "${query}" — use it only as a visual backdrop, not as the main theme. The mood must reflect the user's feelings above all else.${contextPart}`;
     } else if (mode === "ai") {
-      promptInstruction = `Analyze the mood, atmosphere, and emotions of: "${query}". Use your knowledge and this web context.${contextPart}`;
+      promptInstruction = `Analyze "${query}" objectively. Ignore any personal feelings. Focus purely on the visual atmosphere, themes, and emotions that "${query}" itself communicates. Web context: ${webContext}`;
     } else {
-      const emotionPart =
-        userEmotions.length > 0
-          ? ` The user also describes these feelings: ${userEmotions.join(", ")}.`
-          : "";
-      promptInstruction = `Analyze the mood, atmosphere, and emotions of: "${query}".${emotionPart} Combine the track's qualities and the user's feelings.${contextPart}`;
+      const emotionPart = userEmotions.length > 0
+        ? ` User's personal feelings: ${userEmotions.join(", ")}.`
+        : "";
+      promptInstruction = `Combine two sources equally: the objective atmosphere of "${query}" AND the user's personal feelings.${emotionPart} Neither should dominate — blend both into the prompts. Web context: ${webContext}`;
     }
 
     const completion = await groq.chat.completions.create({
