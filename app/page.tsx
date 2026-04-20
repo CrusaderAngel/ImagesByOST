@@ -250,27 +250,19 @@ export default function OSTVisualizer() {
         {/* Gallery Section */}
         {generatedImages.length > 0 && (
           <section className="mt-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid gap-4 md:grid-cols-2">
-              {generatedImages.map((image, index) => (
-                <div
-                  key={image.id}
-                  className="group relative animate-in fade-in duration-700"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <img
-                    src={image.src}
-                    alt={`Generated visualization ${image.id}`}
-                    className="aspect-[3/2] w-full object-cover"
-                  />
-                  <button
-                    onClick={() => handleDownload(image.src, image.id)}
-                    className="absolute bottom-3 right-3 p-2 text-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                    aria-label={`Download image ${image.id}`}
-                  >
-                    <Download className="h-5 w-5" strokeWidth={1.5} />
-                  </button>
-                </div>
-              ))}
+            <div className="group relative">
+              <img
+                src={generatedImages[0].src}
+                alt="Generated visualization"
+                className="w-full object-cover"
+              />
+              <button
+                onClick={() => handleDownload(generatedImages[0].src, generatedImages[0].id)}
+                className="absolute bottom-3 right-3 p-2 text-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                aria-label="Download image"
+              >
+                <Download className="h-5 w-5" strokeWidth={1.5} />
+              </button>
             </div>
           </section>
         )}

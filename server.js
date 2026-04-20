@@ -83,32 +83,29 @@ app.post("/api/generate", async (req, res) => {
       return res.status(400).json({ error: "prompts array required" });
     }
 
-    const imageResults = await Promise.all(
-      prompts.map(async (prompt) => {
-        const response = await fetch(
-          "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ inputs: prompt }),
-          }
-        );
+    const prompt = prompts[0];
 
-        if (!response.ok) {
-          const errText = await response.text();
-          throw new Error(`HuggingFace error: ${response.status} ${errText}`);
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        const base64 = Buffer.from(arrayBuffer).toString("base64");
-        return base64;
-      })
+    const response = await fetch(
+      "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ inputs: prompt }),
+      }
     );
 
-    res.json({ images: imageResults });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`HuggingFace error: ${response.status} ${errText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+
+    res.json({ images: [base64] });
   } catch (err) {
     console.error("Error in /api/generate:", err);
     res.status(500).json({ error: err.message || "Failed to generate images" });
