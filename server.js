@@ -1,13 +1,13 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 app.post("/api/analyze", async (req, res) => {
   try {
@@ -30,24 +30,36 @@ app.post("/api/analyze", async (req, res) => {
       promptInstruction = `Analyze the mood, atmosphere, and emotions of the anime/game OST or track: "${query}".${emotionPart} Combine both the track's qualities and the user's feelings.`;
     }
 
-    const systemPrompt = `You are a creative visual artist and synesthete who translates music emotions into vivid imagery.
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a creative visual artist and synesthete who translates music emotions into vivid imagery. Always respond with a valid JSON array of exactly 5 strings and nothing else.",
+        },
+        {
+          role: "user",
+          content: `${promptInstruction}
 
-${promptInstruction}
-
-Return a JSON array of exactly 5 strings. Each string is a standalone, vivid image generation prompt — rich with visual detail, color palette, atmosphere, lighting, and mood. No numbering, no labels, no explanation. Output only valid JSON like: ["prompt1","prompt2","prompt3","prompt4","prompt5"]`;
-
-    const result = await genai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
-      config: { responseMimeType: "application/json" },
+Return a JSON array of exactly 5 strings. Each string is a standalone, vivid image generation prompt — rich with visual detail, color palette, atmosphere, lighting, and mood. No numbering, no labels, no explanation outside the JSON. Output only the JSON array like: ["prompt1","prompt2","prompt3","prompt4","prompt5"]`,
+        },
+      ],
+      temperature: 0.8,
+      max_tokens: 1024,
+      response_format: { type: "json_object" },
     });
 
-    const text = result.text ?? "";
+    const text = completion.choices[0]?.message?.content ?? "";
     let prompts;
     try {
-      prompts = JSON.parse(text);
-      if (!Array.isArray(prompts)) throw new Error("Not an array");
-      prompts = prompts.slice(0, 5).map(String);
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        prompts = parsed.slice(0, 5).map(String);
+      } else {
+        const firstArray = Object.values(parsed).find(Array.isArray);
+        prompts = firstArray ? firstArray.slice(0, 5).map(String) : [];
+      }
     } catch {
       prompts = text
         .split("\n")
@@ -73,18 +85,30 @@ app.post("/api/generate", async (req, res) => {
 
     const imageResults = await Promise.all(
       prompts.map(async (prompt) => {
-        const response = await genai.models.generateImages({
-          model: "imagen-3.0-generate-001",
-          prompt,
-          config: { numberOfImages: 1, outputMimeType: "image/jpeg" },
-        });
-        const bytes = response.generatedImages?.[0]?.image?.imageBytes;
-        return bytes ?? null;
+        const response = await fetch(
+          "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ inputs: prompt }),
+          }
+        );
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`HuggingFace error: ${response.status} ${errText}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString("base64");
+        return base64;
       })
     );
 
-    const images = imageResults.filter(Boolean);
-    res.json({ images });
+    res.json({ images: imageResults });
   } catch (err) {
     console.error("Error in /api/generate:", err);
     res.status(500).json({ error: err.message || "Failed to generate images" });

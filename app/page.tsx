@@ -93,7 +93,7 @@ export default function OSTVisualizer() {
       setGeneratedImages(
         images.map((base64: string, index: number) => ({
           id: index + 1,
-          src: `data:image/jpeg;base64,${base64}`,
+          src: `data:image/png;base64,${base64}`,
         }))
       )
     } catch (err: unknown) {
