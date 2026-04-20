@@ -2,30 +2,6 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import Groq from "groq-sdk";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { randomBytes } from "crypto";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const GALLERY_DIR = path.join(__dirname, "public", "gallery");
-const GALLERY_JSON = path.join(__dirname, "data", "gallery.json");
-
-if (!fs.existsSync(GALLERY_DIR)) fs.mkdirSync(GALLERY_DIR, { recursive: true });
-if (!fs.existsSync(path.dirname(GALLERY_JSON))) fs.mkdirSync(path.dirname(GALLERY_JSON), { recursive: true });
-if (!fs.existsSync(GALLERY_JSON)) fs.writeFileSync(GALLERY_JSON, "[]");
-
-function readGallery() {
-  try {
-    return JSON.parse(fs.readFileSync(GALLERY_JSON, "utf8"));
-  } catch {
-    return [];
-  }
-}
-
-function writeGallery(items) {
-  fs.writeFileSync(GALLERY_JSON, JSON.stringify(items, null, 2));
-}
 
 const app = express();
 app.use(cors());
@@ -101,7 +77,7 @@ Return a JSON array of exactly 5 strings. Each string is a standalone, vivid ima
 
 app.post("/api/generate", async (req, res) => {
   try {
-    const { prompts = [], query = "", mode = "combined" } = req.body;
+    const { prompts = [] } = req.body;
 
     if (!prompts.length) {
       return res.status(400).json({ error: "prompts array required" });
@@ -127,39 +103,12 @@ app.post("/api/generate", async (req, res) => {
     }
 
     const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64 = buffer.toString("base64");
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
 
-    const id = `${Date.now()}_${randomBytes(4).toString("hex")}`;
-    const filename = `${id}.jpg`;
-    fs.writeFileSync(path.join(GALLERY_DIR, filename), buffer);
-
-    const entry = {
-      id,
-      filename,
-      prompt,
-      track: query,
-      mode,
-      timestamp: new Date().toISOString(),
-    };
-    const gallery = readGallery();
-    gallery.unshift(entry);
-    writeGallery(gallery);
-
-    res.json({ images: [base64], saved: entry });
+    res.json({ images: [base64] });
   } catch (err) {
     console.error("Error in /api/generate:", err);
     res.status(500).json({ error: err.message || "Failed to generate images" });
-  }
-});
-
-app.get("/api/gallery", (req, res) => {
-  try {
-    const gallery = readGallery();
-    res.json({ items: gallery });
-  } catch (err) {
-    console.error("Error in /api/gallery:", err);
-    res.status(500).json({ error: err.message || "Failed to load gallery" });
   }
 });
 
