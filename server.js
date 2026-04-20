@@ -8,15 +8,20 @@ app.use(cors());
 app.use(express.json());
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const searchCache = new Map();
 
 async function searchContext(query) {
+  if (searchCache.has(query)) {
+    return searchCache.get(query);
+  }
+
   try {
     const response = await fetch("https://api.tavily.com/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         api_key: process.env.TAVILY_API_KEY,
-        query: `${query} movie anime cartoon game hero character OST soundtrack atmosphere mood`,
+        query: `${query} anime game OST soundtrack atmosphere mood`,
         max_results: 3,
         search_depth: "basic",
       }),
@@ -31,7 +36,9 @@ async function searchContext(query) {
       .join(" ")
       .slice(0, 1500);
 
-    return context || "";
+    const result = context || "";
+    searchCache.set(query, result);
+    return result;
   } catch {
     return "";
   }
