@@ -49,7 +49,7 @@ app.post("/api/analyze", async (req, res) => {
     const { query, userEmotions = [], mode = "combined" } = req.body;
 
     if (!query && userEmotions.length === 0) {
-      return res.status(400).json({ error: "query or userEmotions required" });
+      return res.status(400).json({ error: "Input field is empty" });
     }
 
     // Поиск контекста через Tavily (только если есть query)

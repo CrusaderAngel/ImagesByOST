@@ -34,17 +34,6 @@ export default function OSTVisualizer() {
   const [error, setError] = useState<string | null>(null)
   const [queryError, setQueryError] = useState(false)
 
-  const handleAnalyze = () => {
-    if (!searchQuery.trim()) {
-      setQueryError(true)
-      return
-    }
-    setQueryError(false)
-    setShowEmotions(true)
-    setGeneratedImages([])
-    setError(null)
-  }
-
   const toggleEmotion = (emotion: string) => {
     setSelectedEmotions((prev) =>
       prev.includes(emotion)
@@ -137,30 +126,23 @@ export default function OSTVisualizer() {
         {/* Hero Input Section */}
         <section className="flex flex-col items-center gap-6">
           <h1 className="text-center text-4xl font-light tracking-tight md:text-5xl">
-          Lumina Echoes
+            Lumina Echoes
           </h1>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setQueryError(false) }}
-            onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
             placeholder="Enter movie, game, or track name..."
             className={`w-full border bg-transparent px-4 py-4 text-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${queryError ? "border-red-500 focus:border-red-400" : "border-border focus:border-foreground"}`}
           />
           {queryError && (
             <p className="text-sm text-red-500 -mt-2">Please enter a track or movie name first.</p>
           )}
-          <button
-            onClick={handleAnalyze}
-            className="border border-border px-8 py-3 text-sm uppercase tracking-widest text-foreground transition-colors hover:border-foreground cursor-pointer"
-          >
-            Analyze
-          </button>
         </section>
 
         {/* Emotion Selection Section */}
-        {showEmotions && (
-          <section className="mt-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        
+          <section className="mt-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="mb-12 text-center text-2xl font-light">
               What do you feel?
             </h2>
@@ -191,10 +173,10 @@ export default function OSTVisualizer() {
               />
             </div>
           </section>
-        )}
+        
 
         {/* Generation Mode Selector */}
-        {showEmotions && (
+       
           <section className="mt-24 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
             <div className="grid gap-4 md:grid-cols-3">
               {modeCards.map((card) => {
@@ -222,10 +204,10 @@ export default function OSTVisualizer() {
               })}
             </div>
           </section>
-        )}
+      
 
         {/* Generate Button */}
-        {showEmotions && (
+       
           <section className="mt-16 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
             <button
               onClick={handleGenerate}
@@ -235,7 +217,7 @@ export default function OSTVisualizer() {
               {isGenerating ? "Generating..." : "Generate image"}
             </button>
           </section>
-        )}
+      
 
         {/* Error Message */}
         {error && (
