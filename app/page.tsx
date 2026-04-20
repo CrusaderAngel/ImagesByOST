@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Download, Sparkles, Brain, Merge } from "lucide-react"
 
 const emotionTags = [
@@ -23,6 +23,15 @@ interface GeneratedImage {
   src: string
 }
 
+interface GalleryItem {
+  id: string
+  filename: string
+  prompt: string
+  track: string
+  mode: string
+  timestamp: string
+}
+
 export default function OSTVisualizer() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showEmotions, setShowEmotions] = useState(false)
@@ -33,6 +42,14 @@ export default function OSTVisualizer() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [queryError, setQueryError] = useState(false)
+  const [gallery, setGallery] = useState<GalleryItem[]>([])
+
+  useEffect(() => {
+    fetch("/api/gallery")
+      .then((r) => r.json())
+      .then((data) => setGallery(data.items ?? []))
+      .catch(() => {})
+  }, [])
 
   const handleAnalyze = () => {
     if (!searchQuery.trim()) {
@@ -80,7 +97,7 @@ export default function OSTVisualizer() {
       const generateRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompts }),
+        body: JSON.stringify({ prompts, query: searchQuery, mode: generationMode }),
       })
 
       if (!generateRes.ok) {
@@ -88,7 +105,7 @@ export default function OSTVisualizer() {
         throw new Error(err.error || "Failed to generate images")
       }
 
-      const { images } = await generateRes.json()
+      const { images, saved } = await generateRes.json()
 
       setGeneratedImages(
         images.map((base64: string, index: number) => ({
@@ -96,6 +113,10 @@ export default function OSTVisualizer() {
           src: `data:image/jpeg;base64,${base64}`,
         }))
       )
+
+      if (saved) {
+        setGallery((prev) => [saved, ...prev])
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong")
     } finally {
@@ -103,10 +124,10 @@ export default function OSTVisualizer() {
     }
   }
 
-  const handleDownload = (src: string, id: number) => {
+  const handleDownload = (src: string, name: string) => {
     const link = document.createElement("a")
     link.href = src
-    link.download = `ost-visual-${id}.jpg`
+    link.download = name
     link.click()
   }
 
@@ -165,7 +186,6 @@ export default function OSTVisualizer() {
               What do you feel?
             </h2>
             <div className="grid gap-12 md:grid-cols-2">
-              {/* Emotion Tags Grid */}
               <div className="flex flex-wrap gap-3">
                 {emotionTags.map((emotion) => {
                   const isSelected = selectedEmotions.includes(emotion)
@@ -184,8 +204,6 @@ export default function OSTVisualizer() {
                   )
                 })}
               </div>
-
-              {/* Custom Description Textarea */}
               <textarea
                 value={customDescription}
                 onChange={(e) => setCustomDescription(e.target.value)}
@@ -247,7 +265,7 @@ export default function OSTVisualizer() {
           </section>
         )}
 
-        {/* Gallery Section */}
+        {/* Current Generated Image */}
         {generatedImages.length > 0 && (
           <section className="mt-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="group relative">
@@ -256,13 +274,55 @@ export default function OSTVisualizer() {
                 alt="Generated visualization"
                 className="w-full object-cover"
               />
-              <button
-                onClick={() => handleDownload(generatedImages[0].src, generatedImages[0].id)}
-                className="absolute bottom-3 right-3 p-2 text-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                aria-label="Download image"
-              >
-                <Download className="h-5 w-5" strokeWidth={1.5} />
-              </button>
+              <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 py-2 bg-black/50">
+                <span className="text-[11px] text-white/70 tracking-wide">
+                  FLUX.1-schnell · Hugging Face
+                </span>
+                <button
+                  onClick={() => handleDownload(generatedImages[0].src, `ost-visual-${Date.now()}.jpg`)}
+                  className="p-1 text-white/70 opacity-0 transition-opacity group-hover:opacity-100"
+                  aria-label="Download image"
+                >
+                  <Download className="h-4 w-4" strokeWidth={1.5} />
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Persistent Gallery */}
+        {gallery.length > 0 && (
+          <section className="mt-24">
+            <h2 className="mb-8 text-xl font-light tracking-tight">Previously generated</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {gallery.map((item) => (
+                <div key={item.id} className="group relative">
+                  <img
+                    src={`/gallery/${item.filename}`}
+                    alt={item.track || "Generated visualization"}
+                    className="aspect-[3/2] w-full object-cover"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 py-2 bg-black/50">
+                    <div className="min-w-0">
+                      {item.track && (
+                        <p className="text-[11px] text-white/90 truncate font-medium">
+                          {item.track}
+                        </p>
+                      )}
+                      <span className="text-[10px] text-white/50 tracking-wide">
+                        FLUX.1-schnell · Hugging Face
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleDownload(`/gallery/${item.filename}`, `${item.id}.jpg`)}
+                      className="ml-2 shrink-0 p-1 text-white/70 opacity-0 transition-opacity group-hover:opacity-100"
+                      aria-label="Download image"
+                    >
+                      <Download className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
         )}
